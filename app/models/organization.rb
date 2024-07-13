@@ -35,7 +35,8 @@ class Organization < ApplicationRecord
   validates :name, presence: true
   validates :permalink, presence: true, format: { with: /\A[a-z0-9-]*\z/ }, uniqueness: { case_sensitive: false }, exclusion: { in: RESERVED_PERMALINKS }
   validates :time_zone, presence: true
-
+  validates :max_mail_servers, numericality: { greater_than: 0 }
+  
   default_value :time_zone, -> { "UTC" }
   default_value :permalink, -> { Organization.find_unique_permalink(name) if name }
 
@@ -48,6 +49,7 @@ class Organization < ApplicationRecord
   has_many :organization_ip_pools, dependent: :destroy
   has_many :ip_pools, through: :organization_ip_pools
   has_many :ip_pool_rules, dependent: :destroy, as: :owner
+  has_many :mail_servers  
 
   after_create do
     if IPPool.default
@@ -84,6 +86,10 @@ class Organization < ApplicationRecord
   # This is an array of addresses that should receive notifications for this organization
   def notification_addresses
     users.map(&:email_tag)
+  end
+
+  def can_create_mail_server?
+    mail_servers.count < max_mail_servers
   end
 
   def self.find_unique_permalink(name)
